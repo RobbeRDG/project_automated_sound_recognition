@@ -65,7 +65,7 @@ def generate_and_store_augmented_mel_features(
     for file in tqdm(files_list):
         for copy in tqdm(range(n_copies)):
             # Read the audio data
-            in_data, samplerate = sf.read(join(config.RAW_DATA_PATH, file))
+            in_data, samplerate = sf.read(file)
 
             # TODO, find out why this is needed
             #if in_data.shape[1] >=2:
@@ -88,10 +88,11 @@ def generate_and_store_augmented_mel_features(
                 # Just generate the features
                 out_data = feature_extractor.fe_transform(in_data)
 
-            # The file string hast the form "audio/airport-barcelona-203-6129-0-a.wav"
-            # We remove the audio folder prefix and '.wav' extension
+            # The file string hast the form "<full_path>/airport-barcelona-203-6129-0-a.wav"
+            # We remove the <full_path> prefix and '.wav' extension
             # We finally add the copy number 
-            out_file_name = file[6:-4] + '-' + str(copy)
+            isolated_file_name = file.split('/')[-1]
+            out_file_name = isolated_file_name[:-4] + '-' + str(copy)
 
             # Save the out_data features
             np.save(join(result_export_path, f'{out_file_name}.npy'), out_data)
