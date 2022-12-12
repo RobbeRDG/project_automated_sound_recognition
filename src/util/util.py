@@ -5,6 +5,14 @@ import soundfile as sf
 import os
 from os.path import join
 from util import config, feat_extract
+from keras_cv.layers.preprocessing import MixUp
+import tensorflow as tf
+
+# Create a mixup instance 
+mixup = MixUp(alpha = 0.2, seed  = 10)
+
+# Initialize the feature extractor class
+feature_extractor = feat_extract.FE(config.featconf)
 
 def spec_augment_offline(spectrogram, configuration):
     '''
@@ -51,19 +59,26 @@ def generate_and_store_augmented_mel_features(
         The final result is stored in 
     '''
 
-    if augment:
+    if augment[0]:
         # Unpack the audiomentations config
         audiomentations_augmentations = audiomentations_config["augmentations"]
 
+    if augment[1]:
         # Unpack the specaugment config
         specaugment_configurations = specaugment_config["configuration"]
 
-    # Initialize the feature extractor class
-    feature_extractor = feat_extract.FE(config.featconf)
+    if augment[2]:
+        # Unpack the mixup config
+        mixup_alpha = specaugment_config["alpha"]
+        mixup_probability = specaugment_config["prob"]
+
 
     # Go through each audio file in the files list and generate augmented copies
-    for file in tqdm(files_list):
-        for copy in tqdm(range(n_copies)):
+    for file in tqdm(files_list, position=0, leave=True):
+        # Get the isolated file name
+        isolated_file_name = file.split('/')[-1]
+
+        for copy in range(0, n_copies):
             # Read the audio data
             in_data, samplerate = sf.read(file)
 
@@ -74,24 +89,24 @@ def generate_and_store_augmented_mel_features(
             # Give error if samplerate is different from featconf['samFreq']
             assert samplerate == config.featconf['samFreq'], "Samplerate of the .wav file differs from the feature configuration!"
 
-            if augment:
+            if augment[0] or augment[1] or augment[2]:
                 # Augment the audio data using audiomentations
-                out_data = audiomentations_augmentations(samples=in_data, sample_rate=samplerate)
+                out_data = audiomentations_augmentations(samples=in_data, sample_rate=samplerate) if augment[0] else in_data
 
-                # The resulting data after this augmentation is still raw spectogram data, however, since the specaugment transformations work on the mel features
+                # The resulting data after this augmentation is still raw spectogram data, however, since the nex transformations work on the mel features
                 # we first need to extract these mel bins
                 out_data = feature_extractor.fe_transform(out_data)
 
+                out_data = mixup(out_data, files_list, mixup_alpha, mixup_probability) if augment[2] else out_data
+
                 # Now that the sample is converted to mel bins, we can pass it through the offline specaugment to get the final output
-                out_data = spec_augment_offline(out_data, specaugment_configurations)
+                out_data = spec_augment_offline(out_data, specaugment_configurations) if augment[1] else out_data
             else:
                 # Just generate the features
                 out_data = feature_extractor.fe_transform(in_data)
 
-            # The file string hast the form "<full_path>/airport-barcelona-203-6129-0-a.wav"
-            # We remove the <full_path> prefix and '.wav' extension
+            
             # We finally add the copy number 
-            isolated_file_name = file.split('/')[-1]
             out_file_name = isolated_file_name[:-4] + '-' + str(copy)
 
             # Save the out_data features
@@ -101,3 +116,22 @@ def generate_and_store_augmented_mel_features(
             plt = feature_extractor.create_plot(out_data, file)
             plt.savefig(join(result_export_path, f'{out_file_name}.png'))
             plt.close()
+
+def mixup(original_data, files_list, mixup_alpha, mixup_probability):
+    if random.random() < mixup_probability:
+        # Read in a random audio file from the file list
+        random_idx = random.randint(0,len(files_list)-1)
+        random_audiofile = sf.read(files_list[random_idx])
+
+        random_audiofile_mel_features = feature_extractor.fe_transform(random_audiofile)
+
+        # 
+        l = sample_beta_distribution(mixup_alpha)
+        resulting_image = images_one * x_l + images_two * (1 - x_l)
+        resulting_label = labels_one * y_l + labels_two * (1 - y_l)
+
+
+def sample_beta_distribution(mixup_alpha):
+    gamma_1_sample = tf.random.gamma(alpha=mixup_alpha)
+    gamma_2_sample = tf.random.gamma(alpha=mixup_alpha)
+    return gamma_1_sample / (gamma_1_sample + gamma_2_sample)

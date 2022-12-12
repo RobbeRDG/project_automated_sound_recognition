@@ -1,6 +1,6 @@
 from os.path import join
 
-PROJECT_BASE_PATH = '/workspaces/project_automated_sound_recognition'
+PROJECT_BASE_PATH = '/home/robbe/code/school/2022-2023/Sem1/applied_ai_academic_perspectives/ASR/project_automated_sound_recognition'
 SRC_PATH = join(PROJECT_BASE_PATH, "src")
 DATA_BASE_PATH = join(PROJECT_BASE_PATH, "data")
 
@@ -16,6 +16,7 @@ TEST_DATA_BASE_PATH = join(DATA_BASE_PATH, "test")
 
 TRAIN_DATA_BASELINE = join(TRAIN_DATA_BASE_PATH, "baseline")
 TRAIN_DATA_EX1 = join(TRAIN_DATA_BASE_PATH, "ex1")
+TRAIN_DATA_EX2 = join(TRAIN_DATA_BASE_PATH, "ex2")
 
 N_COPIES =  5
 
