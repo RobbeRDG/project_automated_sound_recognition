@@ -1,8 +1,8 @@
 import torch
 from tqdm import tqdm
 
-from util import config
-from sklearn.metrics import f1_score
+from util import config, util_functions
+from sklearn.metrics import f1_score, accuracy_score
 
 
 def validate_classification_model(
@@ -28,14 +28,17 @@ def validate_classification_model(
             loss = loss_fn(output, label)
 
             # Add the loss to the total
-            total_loss += loss
+            total_loss += loss.item()
 
             # Get the predicted class
-            pred_class = torch.argmax(output[0])
+            pred_class = torch.argmax(output)
+
+            # Get the true class
+            true_class = torch.argmax(label)
 
             # update the evaluation data
             pred_classes.append(pred_class.item())
-            true_classes.append(label.item())  
+            true_classes.append(true_class.item()) 
 
     # Get the average f1 score
     f1 = f1_score(true_classes, pred_classes, average=None)
@@ -43,7 +46,10 @@ def validate_classification_model(
     # Get the average f1 score
     f1_avg = f1_score(true_classes, pred_classes, average='macro')
 
-    return total_loss, f1, f1_avg
+    # Get the accuracy
+    accuracy = accuracy_score(true_classes, pred_classes)
+
+    return total_loss, f1, f1_avg, accuracy
 
     
 

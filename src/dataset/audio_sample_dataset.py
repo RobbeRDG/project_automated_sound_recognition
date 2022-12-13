@@ -10,7 +10,6 @@ from audiomentations import AddGaussianNoise, PitchShift
 import numpy as np
 import torch
 import seaborn as sn
-import librosa
 from util import feat_extract
 
 class AudioSampleDataset(Dataset):
@@ -53,7 +52,7 @@ class AudioSampleDataset(Dataset):
 
         # Finally, we use a CV network for RGB data, but we only have 1 channel
         # So, copy this channel 3 times
-        waveform = torch.cat([waveform, waveform, waveform], dim=0)
+        waveform = torch.stack([waveform, waveform, waveform], dim=0)
 
         return waveform, label
 
@@ -63,7 +62,6 @@ class AudioSampleDataset(Dataset):
 
         # Get the onehot label for the image
         label = util_functions.extract_onehot_label_from_filename(sample_filename)
-        label = torch.Tensor(label)
 
         # Set the sample file path
         sample_file_path = join(self.raw_audio_samples_base_path, sample_filename)
@@ -99,13 +97,11 @@ class AudioSampleDataset(Dataset):
     def raw_to_mel(self, waveform):
         waveform = self.feature_extractor.fe_transform(waveform)
 
-        # Save as heatmap
-        #hm = sn.heatmap(waveform)
-        #figure = hm.get_figure()    
-        #figure.savefig('hm.png')
-
         # This method produces a list, so convert it back to tensor
         waveform = torch.Tensor(waveform)
+
+        # Transpose the matrix
+        waveform = torch.transpose(waveform, 0, 1)
 
         return waveform
 
@@ -132,6 +128,11 @@ class AudioSampleDataset(Dataset):
                 # Also mixup labels
                 label = torch.add(torch.mul(lam, label), torch.mul((1 - lam), label_other_sample))
 
+                # Since the produced lambda will usually be very big or very small,
+                # a good simplification is to just pick the majority label
+                mayority_class_idx = torch.argmax(label)
+                label = util_functions.idx_to_onehot(mayority_class_idx)
+
 
         if self.augmentations['freq_mask']['enabled']:
             if random.random() < self.augmentations['freq_mask']['p']:
@@ -142,11 +143,17 @@ class AudioSampleDataset(Dataset):
 
         if self.augmentations['time_mask']['enabled']:
             if random.random() < self.augmentations['time_mask']['p']:
+
+                # TimeMasking wants extra dimention in front
                 waveform = waveform.unsqueeze(0)
+
                 transform = transforms.TimeMasking(
                     time_mask_param= self.augmentations['time_mask']['time_mask_param']
                 )
                 waveform = transform(waveform)
+
+                # Get rid of extra dimention
+                waveform = waveform[0]
 
         return waveform, label
 
