@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 
 from util import config, util_functions
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, accuracy_score, classification_report
 
 
 def validate_classification_model(
@@ -40,16 +40,8 @@ def validate_classification_model(
             pred_classes.append(pred_class.item())
             true_classes.append(true_class.item()) 
 
-    # Get the average f1 score
-    f1 = f1_score(true_classes, pred_classes, average=None)
 
-    # Get the average f1 score
-    f1_avg = f1_score(true_classes, pred_classes, average='macro')
-
-    # Get the accuracy
-    accuracy = accuracy_score(true_classes, pred_classes)
-
-    return total_loss, f1, f1_avg, accuracy
+    return total_loss, pred_classes, true_classes
 
     
 

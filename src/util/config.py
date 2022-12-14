@@ -5,7 +5,7 @@ import torch
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = 128
 LR = 1e-5
-EPOCHS = 20
+EPOCHS = 40
 
 SRC_PATH = "src"
 DATA_BASE_PATH = "data"

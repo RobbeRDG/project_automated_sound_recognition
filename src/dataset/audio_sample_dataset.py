@@ -130,8 +130,8 @@ class AudioSampleDataset(Dataset):
 
                 # Since the produced lambda will usually be very big or very small,
                 # a good simplification is to just pick the majority label
-                mayority_class_idx = torch.argmax(label)
-                label = util_functions.idx_to_onehot(mayority_class_idx)
+                #mayority_class_idx = torch.argmax(label)
+                #label = util_functions.idx_to_onehot(mayority_class_idx)
 
 
         if self.augmentations['freq_mask']['enabled']:
